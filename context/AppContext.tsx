@@ -16,6 +16,10 @@ interface AppContextType {
   deleteRepairJob: (jobId: string) => Promise<void>;
   getRepairJobById: (id: string) => RepairJob | undefined;
   addPart: (part: Omit<Part, 'id'>) => Promise<Part>;
+  deleteTechnician: (technicianId: string) => Promise<void>;
+  deletePart: (partId: string) => Promise<void>;
+  exportData: () => Promise<void>;
+  importData: (file: File) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -105,6 +109,85 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newPart;
   };
 
+  const deleteTechnician = async (technicianId: string) => {
+    await db.technicians.delete(technicianId);
+    setTechnicians(prev => prev.filter(t => t.id !== technicianId));
+  };
+
+  const deletePart = async (partId: string) => {
+    await db.parts.delete(partId);
+    setParts(prev => prev.filter(p => p.id !== partId));
+  };
+
+  const exportData = async () => {
+    try {
+      const dataToExport = {
+        customers: await db.customers.toArray(),
+        technicians: await db.technicians.toArray(),
+        parts: await db.parts.toArray(),
+        repairJobs: await db.repairJobs.toArray(),
+      };
+      
+      const jsonString = JSON.stringify(dataToExport, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      a.download = `repairsys-backup-${timestamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error("Failed to export data:", error);
+      alert("เกิดข้อผิดพลาดในการส่งออกข้อมูล!");
+    }
+  };
+
+  const importData = async (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const content = event.target?.result;
+        if (typeof content !== 'string') {
+          throw new Error("ไม่สามารถอ่านเนื้อหาไฟล์ได้");
+        }
+        const parsedData = JSON.parse(content);
+
+        if (!parsedData.customers || !parsedData.technicians || !parsedData.parts || !parsedData.repairJobs) {
+          throw new Error("รูปแบบไฟล์สำรองไม่ถูกต้อง");
+        }
+
+        await db.transaction('rw', db.customers, db.technicians, db.parts, db.repairJobs, async () => {
+          await db.customers.clear();
+          await db.technicians.clear();
+          await db.parts.clear();
+          await db.repairJobs.clear();
+
+          await db.customers.bulkPut(parsedData.customers);
+          await db.technicians.bulkPut(parsedData.technicians);
+          await db.parts.bulkPut(parsedData.parts);
+          await db.repairJobs.bulkPut(parsedData.repairJobs);
+        });
+        
+        alert("นำเข้าข้อมูลสำเร็จ! แอปพลิเคชันจะทำการรีโหลด");
+        window.location.reload();
+
+      } catch (error) {
+        console.error("Failed to import data:", error);
+        alert(`เกิดข้อผิดพลาดในการนำเข้าข้อมูล: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    };
+    reader.onerror = () => {
+        alert("เกิดข้อผิดพลาดในการอ่านไฟล์");
+    };
+    reader.readAsText(file);
+  };
+
+
   const value = {
     customers,
     technicians,
@@ -118,6 +201,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     deleteRepairJob,
     getRepairJobById,
     addPart,
+    deleteTechnician,
+    deletePart,
+    exportData,
+    importData,
   };
 
   if (isLoading) {

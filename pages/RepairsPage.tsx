@@ -4,14 +4,16 @@ import StatusBadge from '../components/StatusBadge';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { RepairJob, RepairStatus } from '../types';
 import RepairJobModal from '../components/RepairJobModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const RepairsPage: React.FC = () => {
-  const { repairJobs, customers, technicians, updateRepairJob, addRepairJob, deleteRepairJob } = useAppContext();
+  const { repairJobs, customers, updateRepairJob, addRepairJob, deleteRepairJob } = useAppContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<RepairJob | null>(null);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [jobToDelete, setJobToDelete] = useState<string | null>(null);
 
   const getCustomerName = (id: string) => customers.find(c => c.id === id)?.name || 'N/A';
-  const getTechnicianName = (id?: string) => technicians.find(t => id && t.id === id)?.name || 'ยังไม่มอบหมาย';
   
   const handleStatusChange = async (jobId: string, newStatus: RepairStatus) => {
     const job = repairJobs.find(j => j.id === jobId);
@@ -39,11 +41,23 @@ const RepairsPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteJob = async (jobId: string) => {
-    if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบงานซ่อมนี้?')) {
-      await deleteRepairJob(jobId);
+  const openDeleteModal = (jobId: string) => {
+    setJobToDelete(jobId);
+    setIsConfirmModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setJobToDelete(null);
+    setIsConfirmModalOpen(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (jobToDelete) {
+      await deleteRepairJob(jobToDelete);
+      closeDeleteModal();
     }
   };
+
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
@@ -69,7 +83,6 @@ const RepairsPage: React.FC = () => {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">รหัสงานซ่อม</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ลูกค้า</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">อุปกรณ์</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ช่างผู้รับผิดชอบ</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ราคารวม</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">สถานะ</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">วันที่รับเครื่อง</th>
@@ -82,7 +95,6 @@ const RepairsPage: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{job.repairCode}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">{getCustomerName(job.customerId)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">{job.deviceModel}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{getTechnicianName(job.technicianId)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     ฿{(job.laborCost + job.partsCost).toLocaleString()}
                   </td>
@@ -100,7 +112,7 @@ const RepairsPage: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm">{job.receivedDate}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button onClick={() => handleEditJob(job)} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-3"><PencilIcon className="h-5 w-5"/></button>
-                    <button onClick={() => handleDeleteJob(job.id)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"><TrashIcon className="h-5 w-5"/></button>
+                    <button onClick={() => openDeleteModal(job.id)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"><TrashIcon className="h-5 w-5"/></button>
                   </td>
                 </tr>
               ))}
@@ -113,6 +125,13 @@ const RepairsPage: React.FC = () => {
         onClose={handleCloseModal}
         onSave={handleSaveJob}
         jobToEdit={editingJob}
+      />
+      <ConfirmationModal
+        isOpen={isConfirmModalOpen}
+        onClose={closeDeleteModal}
+        onConfirm={handleConfirmDelete}
+        title="ยืนยันการลบงานซ่อม"
+        message={`คุณแน่ใจหรือไม่ว่าต้องการลบงานซ่อมรหัส "${repairJobs.find(j => j.id === jobToDelete)?.repairCode}"? การกระทำนี้ไม่สามารถย้อนกลับได้`}
       />
     </>
   );
