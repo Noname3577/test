@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { RepairJob, RepairStatus, Part } from '../types';
+import { RepairJob, RepairStatus, Part, DeviceType } from '../types';
 import { XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
 import AddPartModal from './AddPartModal';
 
@@ -16,6 +16,7 @@ const RepairJobModal: React.FC<RepairJobModalProps> = ({ isOpen, onClose, onSave
   
   const getInitialState = () => ({
     customerId: customers[0]?.id || '',
+    deviceType: DeviceType.MOBILE,
     deviceModel: '',
     issueDescription: '',
     technicianId: '',
@@ -43,6 +44,7 @@ const RepairJobModal: React.FC<RepairJobModalProps> = ({ isOpen, onClose, onSave
     if (jobToEdit) {
       setFormData({
         customerId: jobToEdit.customerId,
+        deviceType: jobToEdit.deviceType,
         deviceModel: jobToEdit.deviceModel,
         issueDescription: jobToEdit.issueDescription,
         technicianId: jobToEdit.technicianId || '',
@@ -130,6 +132,7 @@ const RepairJobModal: React.FC<RepairJobModalProps> = ({ isOpen, onClose, onSave
     
     const commonData = {
         customerId: jobCustomerId,
+        deviceType: formData.deviceType as DeviceType,
         deviceModel: formData.deviceModel,
         issueDescription: formData.issueDescription,
         technicianId: formData.technicianId || undefined,
@@ -213,6 +216,22 @@ const RepairJobModal: React.FC<RepairJobModalProps> = ({ isOpen, onClose, onSave
             )}
           </fieldset>
           
+          <div>
+            <label htmlFor="deviceType" className="block text-sm font-medium text-gray-700 dark:text-gray-300">ประเภทอุปกรณ์*</label>
+            <select
+                id="deviceType"
+                name="deviceType"
+                value={formData.deviceType}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600"
+                required
+            >
+                {Object.values(DeviceType).map(type => (
+                    <option key={type} value={type}>{type}</option>
+                ))}
+            </select>
+          </div>
+
           <div>
             <label htmlFor="deviceModel" className="block text-sm font-medium text-gray-700 dark:text-gray-300">รุ่นอุปกรณ์*</label>
             <input

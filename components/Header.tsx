@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 const titleMapping: { [key: string]: string } = {
   dashboard: 'แดชบอร์ด',
   repairs: 'งานซ่อม',
+  'repair-monitor': 'มอนิเตอร์งานซ่อม',
   customers: 'ลูกค้า',
   technicians: 'ช่างเทคนิค',
   inventory: 'อะไหล่/สต็อก',

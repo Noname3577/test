@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import StatusBadge from '../components/StatusBadge';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
@@ -12,14 +12,31 @@ const RepairsPage: React.FC = () => {
   const [editingJob, setEditingJob] = useState<RepairJob | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [jobToDelete, setJobToDelete] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<RepairStatus | 'all'>('all');
+  const [statusChangeData, setStatusChangeData] = useState<{ jobId: string; newStatus: RepairStatus; oldStatus: RepairStatus } | null>(null);
+
 
   const getCustomerName = (id: string) => customers.find(c => c.id === id)?.name || 'N/A';
   
-  const handleStatusChange = async (jobId: string, newStatus: RepairStatus) => {
-    const job = repairJobs.find(j => j.id === jobId);
-    if (job) {
-      await updateRepairJob({ ...job, status: newStatus });
+  const handleStatusSelect = (job: RepairJob, newStatus: RepairStatus) => {
+    if (job.status !== newStatus) {
+      setStatusChangeData({ jobId: job.id, oldStatus: job.status, newStatus });
     }
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (statusChangeData) {
+      const { jobId, newStatus } = statusChangeData;
+      const job = repairJobs.find(j => j.id === jobId);
+      if (job) {
+        await updateRepairJob({ ...job, status: newStatus });
+      }
+      setStatusChangeData(null);
+    }
+  };
+  
+  const handleCancelStatusChange = () => {
+    setStatusChangeData(null);
   };
 
   const handleSaveJob = async (jobData: RepairJob | Omit<RepairJob, 'id' | 'repairCode'>) => {
@@ -58,23 +75,46 @@ const RepairsPage: React.FC = () => {
     }
   };
 
-
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingJob(null);
   }
 
+  const filteredJobs = useMemo(() => {
+    if (statusFilter === 'all') {
+      return repairJobs;
+    }
+    return repairJobs.filter(job => job.status === statusFilter);
+  }, [repairJobs, statusFilter]);
+
+
   return (
     <>
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-          <h2 className="text-lg font-semibold">งานซ่อมทั้งหมด</h2>
-          <button 
-            onClick={handleOpenCreateModal}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            สร้างงานซ่อมใหม่
-          </button>
+        <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h2 className="text-lg font-semibold">งานซ่อมทั้งหมด</h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+                <div>
+                    <label htmlFor="status-filter" className="sr-only">กรองตามสถานะ</label>
+                    <select
+                        id="status-filter"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value as RepairStatus | 'all')}
+                        className="block w-full sm:w-auto rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2 pl-3 pr-10 text-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                    >
+                        <option value="all">สถานะทั้งหมด</option>
+                        {Object.values(RepairStatus).map(status => (
+                        <option key={status} value={status}>{status}</option>
+                        ))}
+                    </select>
+                </div>
+                <button 
+                    onClick={handleOpenCreateModal}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 w-full sm:w-auto"
+                >
+                    สร้างงานซ่อมใหม่
+                </button>
+            </div>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -82,6 +122,7 @@ const RepairsPage: React.FC = () => {
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">รหัสงานซ่อม</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ลูกค้า</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ประเภทอุปกรณ์</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">อุปกรณ์</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ราคารวม</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">สถานะ</th>
@@ -90,10 +131,11 @@ const RepairsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {repairJobs.map((job) => (
+              {filteredJobs.map((job) => (
                 <tr key={job.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{job.repairCode}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">{getCustomerName(job.customerId)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">{job.deviceType}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">{job.deviceModel}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     ฿{(job.laborCost + job.partsCost).toLocaleString()}
@@ -101,7 +143,7 @@ const RepairsPage: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <select
                           value={job.status}
-                          onChange={(e) => handleStatusChange(job.id, e.target.value as RepairStatus)}
+                          onChange={(e) => handleStatusSelect(job, e.target.value as RepairStatus)}
                           className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-1 pl-2 pr-8 text-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
                       >
                           {Object.values(RepairStatus).map(status => (
@@ -132,6 +174,17 @@ const RepairsPage: React.FC = () => {
         onConfirm={handleConfirmDelete}
         title="ยืนยันการลบงานซ่อม"
         message={`คุณแน่ใจหรือไม่ว่าต้องการลบงานซ่อมรหัส "${repairJobs.find(j => j.id === jobToDelete)?.repairCode}"? การกระทำนี้ไม่สามารถย้อนกลับได้`}
+      />
+      <ConfirmationModal
+        isOpen={!!statusChangeData}
+        onClose={handleCancelStatusChange}
+        onConfirm={handleConfirmStatusChange}
+        title="ยืนยันการเปลี่ยนสถานะ"
+        message={
+          statusChangeData 
+            ? `คุณแน่ใจหรือไม่ว่าต้องการเปลี่ยนสถานะงานซ่อม "${repairJobs.find(j => j.id === statusChangeData.jobId)?.repairCode}" จาก "${statusChangeData.oldStatus}" เป็น "${statusChangeData.newStatus}"?`
+            : ''
+        }
       />
     </>
   );

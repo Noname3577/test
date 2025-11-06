@@ -1,4 +1,4 @@
-import { Customer, Technician, Part, RepairJob, RepairStatus } from '../types';
+import { Customer, Technician, Part, RepairJob, RepairStatus, DeviceType } from '../types';
 
 export const mockCustomers: Customer[] = [
   { id: 'C001', name: 'สมชาย ใจดี', phone: '081-234-5678', lineId: 'somchai.j', email: 'somchai.j@email.com' },
@@ -26,6 +26,7 @@ export const mockRepairJobs: RepairJob[] = [
     repairCode: 'RP-000001',
     customerId: 'C001',
     technicianId: 'T001',
+    deviceType: DeviceType.MOBILE,
     deviceModel: 'iPhone 13 Pro',
     issueDescription: 'หน้าจอแตก',
     status: RepairStatus.COMPLETED,
@@ -40,6 +41,7 @@ export const mockRepairJobs: RepairJob[] = [
     repairCode: 'RP-000002',
     customerId: 'C002',
     technicianId: 'T002',
+    deviceType: DeviceType.NOTEBOOK,
     deviceModel: 'MacBook Pro 16"',
     issueDescription: 'แบตเตอรี่เสื่อม',
     status: RepairStatus.IN_PROGRESS,
@@ -53,6 +55,7 @@ export const mockRepairJobs: RepairJob[] = [
     id: 'R003',
     repairCode: 'RP-000003',
     customerId: 'C003',
+    deviceType: DeviceType.MOBILE,
     deviceModel: 'Samsung S22 Ultra',
     issueDescription: 'เปิดไม่ติด',
     status: RepairStatus.AWAITING_PARTS,
@@ -66,6 +69,7 @@ export const mockRepairJobs: RepairJob[] = [
     repairCode: 'RP-000004',
     customerId: 'C001',
     technicianId: 'T002',
+    deviceType: DeviceType.NOTEBOOK,
     deviceModel: 'Dell XPS 15',
     issueDescription: 'ต้องการอัปเกรด RAM และ SSD',
     status: RepairStatus.RETURNED,

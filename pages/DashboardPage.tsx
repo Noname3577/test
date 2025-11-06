@@ -16,9 +16,12 @@ const DashboardPage: React.FC = () => {
 
   const awaitingParts = repairJobs.filter(j => j.status === RepairStatus.AWAITING_PARTS).length;
   const lowStockParts = parts.filter(p => p.stock < 5).length;
-  const totalRevenue = repairJobs
-    .filter(j => j.status === RepairStatus.COMPLETED || j.status === RepairStatus.RETURNED)
-    .reduce((sum, job) => sum + job.laborCost + job.partsCost, 0);
+  
+  const completedJobs = repairJobs
+    .filter(j => j.status === RepairStatus.COMPLETED || j.status === RepairStatus.RETURNED);
+
+  const totalRevenue = completedJobs.reduce((sum, job) => sum + job.laborCost + job.partsCost, 0);
+  const laborOnlyRevenue = completedJobs.reduce((sum, job) => sum + job.laborCost, 0);
 
   const data = [
     { name: RepairStatus.RECEIVED, count: repairJobs.filter(j => j.status === RepairStatus.RECEIVED).length },
@@ -51,6 +54,8 @@ const DashboardPage: React.FC = () => {
         <DashboardCard 
           title="รายรับทั้งหมด (งานเสร็จสิ้น)" 
           value={`฿${totalRevenue.toLocaleString()}`}
+          secondaryLabel="เฉพาะค่าแรง"
+          secondaryValue={`฿${laborOnlyRevenue.toLocaleString()}`}
           icon={<BanknotesIcon className="h-6 w-6 text-white"/>}
           color="bg-green-500"
         />

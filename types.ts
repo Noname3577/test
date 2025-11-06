@@ -7,6 +7,13 @@ export enum RepairStatus {
   CANCELLED = 'ยกเลิก'
 }
 
+export enum DeviceType {
+  MOBILE = 'โทรศัพท์มือถือ',
+  NOTEBOOK = 'โน้ตบุ๊ก',
+  TABLET = 'แท็บเล็ต',
+  OTHER = 'อื่นๆ',
+}
+
 export interface Customer {
   id: string;
   name: string;
@@ -33,6 +40,7 @@ export interface RepairJob {
   repairCode: string;
   customerId: string;
   technicianId?: string;
+  deviceType: DeviceType;
   deviceModel: string;
   issueDescription: string;
   status: RepairStatus;

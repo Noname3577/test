@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { HomeIcon, WrenchScrewdriverIcon, UsersIcon, UserGroupIcon, CubeIcon, ChartBarIcon, Cog6ToothIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { HomeIcon, WrenchScrewdriverIcon, UsersIcon, UserGroupIcon, CubeIcon, ChartBarIcon, Cog6ToothIcon, Bars3Icon, XMarkIcon, ComputerDesktopIcon } from '@heroicons/react/24/outline';
 
 const navigation = [
   { name: 'แดชบอร์ด', href: '/dashboard', icon: HomeIcon },
   { name: 'งานซ่อม', href: '/repairs', icon: WrenchScrewdriverIcon },
+  { name: 'มอนิเตอร์งานซ่อม', href: '/repair-monitor', icon: ComputerDesktopIcon },
   { name: 'ลูกค้า', href: '/customers', icon: UsersIcon },
   { name: 'ช่างเทคนิค', href: '/technicians', icon: UserGroupIcon },
   { name: 'อะไหล่/สต็อก', href: '/inventory', icon: CubeIcon },

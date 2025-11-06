@@ -9,6 +9,7 @@ import TechniciansPage from './pages/TechniciansPage';
 import InventoryPage from './pages/InventoryPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import RepairMonitorPage from './pages/RepairMonitorPage';
 
 const App: React.FC = () => {
   return (
@@ -22,6 +23,7 @@ const App: React.FC = () => {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/repairs" element={<RepairsPage />} />
+              <Route path="/repair-monitor" element={<RepairMonitorPage />} />
               <Route path="/customers" element={<CustomersPage />} />
               <Route path="/technicians" element={<TechniciansPage />} />
               <Route path="/inventory" element={<InventoryPage />} />
