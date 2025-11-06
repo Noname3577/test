@@ -1,0 +1,5 @@
+{
+  "name": "Copy of Repair Management System MVP",
+  "description": "เว็บแอปพลิเคชันสำหรับจัดการงานซ่อมโทรศัพท์มือถือและโน้ตบุ๊ก, รวมถึงข้อมูลลูกค้า, สถานะงาน, ช่างเทคนิค, และสินค้าคงคลัง",
+  "requestFramePermissions": []
+}
