@@ -135,7 +135,7 @@ const RepairJobModal: React.FC<RepairJobModalProps> = ({ isOpen, onClose, onSave
         deviceType: formData.deviceType as DeviceType,
         deviceModel: formData.deviceModel,
         issueDescription: formData.issueDescription,
-        technicianId: formData.technicianId || undefined,
+        technicianId: formData.technicianId || null,
         laborCost: formData.laborCost,
         partsCost: totalPartsCost,
         assignedParts: assignedParts,
