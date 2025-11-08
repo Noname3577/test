@@ -1,12 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { ArrowDownTrayIcon, ArrowUpTrayIcon, DocumentArrowDownIcon, DocumentArrowUpIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, ArrowUpTrayIcon, DocumentArrowDownIcon, DocumentArrowUpIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 const SettingsPage: React.FC = () => {
-    const { exportData, importData } = useAppContext();
+    const { exportData, importData, seedSampleData } = useAppContext();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isConfirmImportOpen, setIsConfirmImportOpen] = useState(false);
+    const [isConfirmSeedOpen, setIsConfirmSeedOpen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,6 +35,11 @@ const SettingsPage: React.FC = () => {
         }
     };
 
+    const handleConfirmSeed = async () => {
+        await seedSampleData();
+        setIsConfirmSeedOpen(false);
+    };
+
     const triggerFileSelect = () => {
         fileInputRef.current?.click();
     };
@@ -41,6 +47,30 @@ const SettingsPage: React.FC = () => {
     return (
         <>
             <div className="space-y-8">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <div className="flex items-start">
+                        <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900/50">
+                            <SparklesIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div className="ml-4 flex-1">
+                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">สร้างข้อมูลตัวอย่าง</h2>
+                             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                                เติมข้อมูลตัวอย่างลงในระบบเพื่อทดสอบฟังก์ชันการทำงานต่างๆ
+                            </p>
+                             <p className="text-sm text-red-600 dark:text-red-400 font-semibold mb-4">
+                               คำเตือน: การดำเนินการนี้จะลบข้อมูลที่มีอยู่ทั้งหมดและแทนที่ด้วยข้อมูลตัวอย่าง
+                            </p>
+                            <button
+                                onClick={() => setIsConfirmSeedOpen(true)}
+                                className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-gray-800"
+                            >
+                                <SparklesIcon className="h-5 w-5 mr-2" />
+                                สร้างข้อมูลตัวอย่าง
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                     <div className="flex items-start">
                         <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/50">
@@ -112,6 +142,14 @@ const SettingsPage: React.FC = () => {
                 onConfirm={handleConfirmImport}
                 title="ยืนยันการนำเข้าข้อมูล"
                 message="คุณแน่ใจหรือไม่ว่าต้องการนำเข้าข้อมูลจากไฟล์นี้? ข้อมูลปัจจุบันทั้งหมดในระบบจะถูกลบและแทนที่อย่างถาวร การกระทำนี้ไม่สามารถย้อนกลับได้"
+            />
+
+            <ConfirmationModal
+                isOpen={isConfirmSeedOpen}
+                onClose={() => setIsConfirmSeedOpen(false)}
+                onConfirm={handleConfirmSeed}
+                title="ยืนยันการสร้างข้อมูลตัวอย่าง"
+                message="คุณแน่ใจหรือไม่? ข้อมูลปัจจุบันทั้งหมดในระบบจะถูกลบและแทนที่ด้วยข้อมูลตัวอย่างอย่างถาวร การกระทำนี้ไม่สามารถย้อนกลับได้"
             />
         </>
     );
