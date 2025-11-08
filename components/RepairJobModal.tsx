@@ -27,7 +27,7 @@ const RepairJobModal: React.FC<RepairJobModalProps> = ({ isOpen, onClose, onSave
     name: '',
     phone: '',
     email: '',
-    lineId: '',
+    address: '',
   });
 
   const [formData, setFormData] = useState(getInitialState());
@@ -115,7 +115,11 @@ const RepairJobModal: React.FC<RepairJobModalProps> = ({ isOpen, onClose, onSave
             alert("กรุณากรอกชื่อและเบอร์โทรของลูกค้าใหม่");
             return;
         }
-        jobCustomerId = await addCustomer(newCustomer);
+        const sanitizedNewCustomer = {
+            ...newCustomer,
+            phone: newCustomer.phone.replace(/-/g, ''),
+        };
+        jobCustomerId = await addCustomer(sanitizedNewCustomer);
     } else {
         jobCustomerId = formData.customerId;
     }
@@ -211,6 +215,10 @@ const RepairJobModal: React.FC<RepairJobModalProps> = ({ isOpen, onClose, onSave
                     <div>
                         <label htmlFor="newCustomerPhone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">เบอร์โทร*</label>
                         <input type="text" name="phone" id="newCustomerPhone" value={newCustomer.phone} onChange={handleNewCustomerChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600" required />
+                    </div>
+                     <div>
+                        <label htmlFor="newCustomerAddress" className="block text-sm font-medium text-gray-700 dark:text-gray-300">ที่อยู่ลูกค้า</label>
+                        <input type="text" name="address" id="newCustomerAddress" value={newCustomer.address} onChange={handleNewCustomerChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600" />
                     </div>
                 </div>
             )}

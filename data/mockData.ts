@@ -1,9 +1,9 @@
-import { Customer, Technician, Part, RepairJob, RepairStatus, DeviceType } from '../types';
+import { Customer, Technician, Part, RepairJob, RepairStatus, DeviceType, PartCategory, Supplier } from '../types';
 
 export const mockCustomers: Customer[] = [
-  { id: 'C001', name: 'สมชาย ใจดี', phone: '081-234-5678', lineId: 'somchai.j', email: 'somchai.j@email.com' },
-  { id: 'C002', name: 'สมหญิง จริงใจ', phone: '082-345-6789', email: 'somy@email.com' },
-  { id: 'C003', name: 'อาทิตย์ ตั้งตรง', phone: '083-456-7890', lineId: 'artit.t' },
+  { id: 'C001', name: 'สมชาย ใจดี', phone: '0812345678', address: '123/4 ถ.สุขุมวิท คลองเตย กรุงเทพฯ 10110', email: 'somchai.j@email.com' },
+  { id: 'C002', name: 'สมหญิง จริงใจ', phone: '0823456789', email: 'somy@email.com' },
+  { id: 'C003', name: 'อาทิตย์ ตั้งตรง', phone: '0834567890', address: '55 หมู่ 3 ต.บางพระ อ.ศรีราชา ชลบุรี 20110' },
 ];
 
 export const mockTechnicians: Technician[] = [
@@ -12,12 +12,24 @@ export const mockTechnicians: Technician[] = [
   { id: 'T003', name: 'ปรีชา สามารถ', specialty: 'General Hardware' },
 ];
 
+export const mockPartCategories: PartCategory[] = [
+  { id: 'PCAT001', name: 'หน้าจอ' },
+  { id: 'PCAT002', name: 'แบตเตอรี่' },
+  { id: 'PCAT003', name: 'ส่วนประกอบภายใน' },
+];
+
+export const mockSuppliers: Supplier[] = [
+  { id: 'SUP001', name: 'iFixit Store' },
+  { id: 'SUP002', name: 'Global Mobile Parts' },
+  { id: 'SUP003', name: 'Laptop Parts Direct' },
+];
+
 export const mockParts: Part[] = [
-  { id: 'P001', name: 'iPhone 13 Screen', stock: 5, price: 2500 },
-  { id: 'P002', name: 'MacBook Pro Battery A2141', stock: 3, price: 3500 },
-  { id: 'P003', name: 'Samsung S22 Battery', stock: 10, price: 1800 },
-  { id: 'P004', name: 'Laptop RAM DDR4 8GB', stock: 15, price: 1200 },
-  { id: 'P005', name: 'SSD 512GB NVMe', stock: 8, price: 2200 },
+  { id: 'P001', name: 'iPhone 13 Screen', stock: 5, price: 2500, categoryId: 'PCAT001', supplierId: 'SUP001' },
+  { id: 'P002', name: 'MacBook Pro Battery A2141', stock: 3, price: 3500, categoryId: 'PCAT002', supplierId: 'SUP003' },
+  { id: 'P003', name: 'Samsung S22 Battery', stock: 10, price: 1800, categoryId: 'PCAT002', supplierId: 'SUP002' },
+  { id: 'P004', name: 'Laptop RAM DDR4 8GB', stock: 15, price: 1200, categoryId: 'PCAT003' },
+  { id: 'P005', name: 'SSD 512GB NVMe', stock: 8, price: 2200, categoryId: 'PCAT003', supplierId: 'SUP003' },
 ];
 
 export const mockRepairJobs: RepairJob[] = [

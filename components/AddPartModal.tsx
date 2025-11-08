@@ -1,33 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { Part } from '../types';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { useAppContext } from '../context/AppContext';
 
 interface AddPartModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (partData: Omit<Part, 'id'>) => void;
+  onSave: (partData: Part | Omit<Part, 'id'>) => void;
+  partToEdit?: Part | null;
 }
 
-const AddPartModal: React.FC<AddPartModalProps> = ({ isOpen, onClose, onSave }) => {
+const AddPartModal: React.FC<AddPartModalProps> = ({ isOpen, onClose, onSave, partToEdit }) => {
+  const { partCategories, suppliers } = useAppContext();
+  
   const getInitialState = () => ({
     name: '',
     stock: 0,
     price: 0,
+    categoryId: '',
+    supplierId: '',
   });
 
   const [formData, setFormData] = useState(getInitialState());
 
   useEffect(() => {
     if (isOpen) {
-      setFormData(getInitialState());
+      if (partToEdit) {
+        setFormData({
+          name: partToEdit.name,
+          stock: partToEdit.stock,
+          price: partToEdit.price,
+          categoryId: partToEdit.categoryId || '',
+          supplierId: partToEdit.supplierId || '',
+        });
+      } else {
+        setFormData(getInitialState());
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, partToEdit]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type } = e.target;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    const target = e.currentTarget as HTMLInputElement;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? parseFloat(value) || 0 : value,
+      [name]: target.type === 'number' ? parseFloat(value) || 0 : value,
     }));
   };
 
@@ -37,7 +54,18 @@ const AddPartModal: React.FC<AddPartModalProps> = ({ isOpen, onClose, onSave }) 
       alert("กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง");
       return;
     }
-    onSave(formData);
+    
+    const dataToSave = {
+        ...formData,
+        categoryId: formData.categoryId || undefined,
+        supplierId: formData.supplierId || undefined,
+    };
+
+    if (partToEdit) {
+      onSave({ ...partToEdit, ...dataToSave });
+    } else {
+      onSave(dataToSave);
+    }
   };
   
   if (!isOpen) return null;
@@ -46,7 +74,7 @@ const AddPartModal: React.FC<AddPartModalProps> = ({ isOpen, onClose, onSave }) 
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4" aria-modal="true" role="dialog">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
         <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">เพิ่มอะไหล่ใหม่</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{partToEdit ? 'แก้ไขข้อมูลอะไหล่' : 'เพิ่มอะไหล่ใหม่'}</h3>
           <button
             onClick={onClose}
             type="button"
@@ -68,6 +96,32 @@ const AddPartModal: React.FC<AddPartModalProps> = ({ isOpen, onClose, onSave }) 
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600"
               required
             />
+          </div>
+          <div>
+            <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">หมวดหมู่</label>
+            <select
+                id="categoryId"
+                name="categoryId"
+                value={formData.categoryId}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600"
+            >
+                <option value="">ไม่มีหมวดหมู่</option>
+                {partCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="supplierId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">แหล่งสั่งซื้อ</label>
+            <select
+                id="supplierId"
+                name="supplierId"
+                value={formData.supplierId}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600"
+            >
+                <option value="">ไม่มีแหล่งสั่งซื้อ</option>
+                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
           </div>
           <div>
             <label htmlFor="partStock" className="block text-sm font-medium text-gray-700 dark:text-gray-300">จำนวนในสต็อก*</label>
@@ -108,7 +162,7 @@ const AddPartModal: React.FC<AddPartModalProps> = ({ isOpen, onClose, onSave }) 
               type="submit"
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
-              บันทึกอะไหล่
+              บันทึก
             </button>
           </div>
         </form>

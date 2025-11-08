@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { Customer, Technician, Part, RepairJob } from '../types';
+import { Customer, Technician, Part, RepairJob, PartCategory, Supplier, RepairStatus } from '../types';
 import { db } from '../firebaseConfig';
-import { mockCustomers, mockTechnicians, mockParts, mockRepairJobs } from '../data/mockData';
+import { mockCustomers, mockTechnicians, mockParts, mockRepairJobs, mockPartCategories, mockSuppliers } from '../data/mockData';
 // Fix: Removed Firebase v9 modular imports as they are not compatible with the older Firebase SDK version that seems to be in use.
 import { CubeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
@@ -9,6 +9,8 @@ interface AppContextType {
   customers: Customer[];
   technicians: Technician[];
   parts: Part[];
+  partCategories: PartCategory[];
+  suppliers: Supplier[];
   repairJobs: RepairJob[];
   addCustomer: (customer: Omit<Customer, 'id'>) => Promise<string>;
   updateCustomer: (customer: Customer) => Promise<void>;
@@ -18,8 +20,18 @@ interface AppContextType {
   deleteRepairJob: (jobId: string) => Promise<void>;
   getRepairJobById: (id: string) => RepairJob | undefined;
   addPart: (part: Omit<Part, 'id'>) => Promise<Part>;
+  updatePart: (part: Part) => Promise<void>;
+  adjustPartStock: (partId: string, adjustment: number) => Promise<void>;
+  addTechnician: (technician: Omit<Technician, 'id'>) => Promise<void>;
+  updateTechnician: (technician: Technician) => Promise<void>;
   deleteTechnician: (technicianId: string) => Promise<void>;
   deletePart: (partId: string) => Promise<void>;
+  addPartCategory: (category: Omit<PartCategory, 'id'>) => Promise<void>;
+  updatePartCategory: (category: PartCategory) => Promise<void>;
+  deletePartCategory: (categoryId: string) => Promise<void>;
+  addSupplier: (supplier: Omit<Supplier, 'id'>) => Promise<void>;
+  updateSupplier: (supplier: Supplier) => Promise<void>;
+  deleteSupplier: (supplierId: string) => Promise<void>;
   exportData: () => Promise<void>;
   importData: (file: File) => Promise<void>;
   seedSampleData: () => Promise<void>;
@@ -31,6 +43,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
+  const [partCategories, setPartCategories] = useState<PartCategory[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [repairJobs, setRepairJobs] = useState<RepairJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,16 +53,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const loadData = async () => {
       try {
         // Fix: Converted Firebase v9 getDocs(collection()) to v8 .collection().get() syntax.
-        const [customersSnap, techniciansSnap, partsSnap, repairJobsSnap] = await Promise.all([
+        const [customersSnap, techniciansSnap, partsSnap, repairJobsSnap, partCategoriesSnap, suppliersSnap] = await Promise.all([
           db.collection("customers").get(),
           db.collection("technicians").get(),
           db.collection("parts").get(),
           db.collection("repairJobs").get(),
+          db.collection("partCategories").get(),
+          db.collection("suppliers").get(),
         ]);
 
         setCustomers(customersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer)));
         setTechnicians(techniciansSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Technician)));
         setParts(partsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Part)));
+        setPartCategories(partCategoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as PartCategory)));
+        setSuppliers(suppliersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Supplier)));
         setRepairJobs(repairJobsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as RepairJob)));
       } catch (err: any) {
         console.error("Failed to load data from Firestore", err);
@@ -87,27 +105,117 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setCustomers(prev => prev.filter(c => c.id !== customerId));
   };
   
+  const handleStockForJobChange = async (newJob: RepairJob | null, oldJob: RepairJob | null) => {
+    const stockAffectingStatuses = [RepairStatus.COMPLETED, RepairStatus.RETURNED];
+    const stockChanges = new Map<string, number>();
+
+    // Restore stock from old job if it was affecting stock
+    if (oldJob && stockAffectingStatuses.includes(oldJob.status) && oldJob.assignedParts) {
+        for (const { partId, quantity } of oldJob.assignedParts) {
+            stockChanges.set(partId, (stockChanges.get(partId) || 0) + quantity);
+        }
+    }
+
+    // Deduct stock for new job if it is affecting stock
+    if (newJob && stockAffectingStatuses.includes(newJob.status) && newJob.assignedParts) {
+        for (const { partId, quantity } of newJob.assignedParts) {
+            stockChanges.set(partId, (stockChanges.get(partId) || 0) - quantity);
+        }
+    }
+
+    if (stockChanges.size === 0) return;
+
+    // Validation
+    const partsToUpdate: Part[] = [];
+    const currentPartsMap = new Map(parts.map(p => [p.id, p]));
+    let validationPassed = true;
+
+    for (const [partId, change] of stockChanges.entries()) {
+        const part = currentPartsMap.get(partId);
+        if (!part) {
+            console.warn(`Part with ID ${partId} not found in state during stock update.`);
+            continue;
+        }
+        
+        const newStock = part.stock + change;
+        
+        if (newStock < 0) {
+            alert(`ไม่สามารถดำเนินการได้ สต็อกอะไหล่ "${part.name}" ไม่เพียงพอ (มีในสต็อก ${part.stock} ชิ้น, แต่ต้องการใช้ ${part.stock - newStock} ชิ้น)`);
+            validationPassed = false;
+            break;
+        }
+        partsToUpdate.push({ ...part, stock: newStock });
+    }
+
+    if (!validationPassed) {
+        throw new Error("Insufficient stock.");
+    }
+
+    // Commit
+    if (partsToUpdate.length > 0) {
+        const batch = db.batch();
+        partsToUpdate.forEach(part => {
+            const partRef = db.collection("parts").doc(part.id);
+            batch.update(partRef, { stock: part.stock });
+        });
+        await batch.commit();
+
+        // Update local state
+        setParts(currentParts => {
+            const newPartsMap = new Map(currentParts.map(p => [p.id, p]));
+            partsToUpdate.forEach(updatedPart => {
+                newPartsMap.set(updatedPart.id, updatedPart);
+            });
+            return Array.from(newPartsMap.values());
+        });
+    }
+  };
+  
   const addRepairJob = async (jobData: Omit<RepairJob, 'id' | 'repairCode'>) => {
     const count = repairJobs.length;
     const repairCode = `RP-${String(count + 1).padStart(6, '0')}`;
     const jobPayload = { ...jobData, repairCode };
-    // Fix: Converted Firebase v9 addDoc(collection()) to v8 .collection().add() syntax.
+    
     const docRef = await db.collection("repairJobs").add(jobPayload);
     const newJob: RepairJob = { id: docRef.id, ...jobPayload };
-    setRepairJobs(prev => [...prev, newJob]);
+
+    try {
+        await handleStockForJobChange(newJob, null);
+        setRepairJobs(prev => [...prev, newJob]);
+    } catch (error) {
+        console.error("Stock update failed on add, reverting job creation.", error);
+        await db.collection("repairJobs").doc(newJob.id).delete();
+        throw error;
+    }
   };
   
   const updateRepairJob = async (updatedJob: RepairJob) => {
-    const { id, ...jobData } = updatedJob;
-    // Fix: Converted Firebase v9 updateDoc(doc()) to v8 .collection().doc().update() syntax.
-    await db.collection("repairJobs").doc(id).update(jobData);
-    setRepairJobs(prev => prev.map(j => j.id === id ? updatedJob : j));
+    const oldJob = repairJobs.find(j => j.id === updatedJob.id);
+    if (!oldJob) return;
+
+    try {
+        await handleStockForJobChange(updatedJob, oldJob);
+        
+        const { id, ...jobData } = updatedJob;
+        await db.collection("repairJobs").doc(id).update(jobData);
+        setRepairJobs(prev => prev.map(j => j.id === id ? updatedJob : j));
+    } catch (error) {
+        console.error("Failed to update repair job:", error);
+    }
   };
 
   const deleteRepairJob = async (jobId: string) => {
-    // Fix: Converted Firebase v9 deleteDoc(doc()) to v8 .collection().doc().delete() syntax.
-    await db.collection("repairJobs").doc(jobId).delete();
-    setRepairJobs(prev => prev.filter(j => j.id !== jobId));
+    const jobToDelete = repairJobs.find(j => j.id === jobId);
+    if (!jobToDelete) return;
+
+    try {
+        await handleStockForJobChange(null, jobToDelete);
+
+        await db.collection("repairJobs").doc(jobId).delete();
+        setRepairJobs(prev => prev.filter(j => j.id !== jobId));
+    } catch (error) {
+        console.error("Failed to delete repair job:", error);
+    }
   };
 
   const getRepairJobById = (id: string) => {
@@ -122,6 +230,43 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newPart;
   };
 
+  const updatePart = async (updatedPart: Part) => {
+    const { id, ...partData } = updatedPart;
+    await db.collection("parts").doc(id).update(partData);
+    setParts(prev => prev.map(p => p.id === id ? updatedPart : p));
+  };
+
+  const adjustPartStock = async (partId: string, adjustment: number) => {
+    const part = parts.find(p => p.id === partId);
+    if (!part) {
+        console.error(`Part with ID ${partId} not found.`);
+        throw new Error("Part not found.");
+    }
+
+    const newStock = part.stock + adjustment;
+    if (newStock < 0) {
+        alert(`ไม่สามารถปรับสต็อกได้ สต็อกคงเหลือไม่เพียงพอ (ปัจจุบัน: ${part.stock}, ต้องการลด: ${-adjustment})`);
+        throw new Error("Insufficient stock for adjustment.");
+    }
+
+    const updatedPart = { ...part, stock: newStock };
+    
+    await db.collection("parts").doc(partId).update({ stock: newStock });
+    setParts(prev => prev.map(p => p.id === partId ? updatedPart : p));
+  };
+
+  const addTechnician = async (technicianData: Omit<Technician, 'id'>) => {
+    const docRef = await db.collection("technicians").add(technicianData);
+    const newTechnician: Technician = { id: docRef.id, ...technicianData };
+    setTechnicians(prev => [...prev, newTechnician]);
+  };
+
+  const updateTechnician = async (updatedTechnician: Technician) => {
+    const { id, ...technicianData } = updatedTechnician;
+    await db.collection("technicians").doc(id).update(technicianData);
+    setTechnicians(prev => prev.map(t => t.id === id ? updatedTechnician : t));
+  };
+
   const deleteTechnician = async (technicianId: string) => {
     // Fix: Converted Firebase v9 deleteDoc(doc()) to v8 .collection().doc().delete() syntax.
     await db.collection("technicians").doc(technicianId).delete();
@@ -134,6 +279,40 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setParts(prev => prev.filter(p => p.id !== partId));
   };
 
+  const addPartCategory = async (categoryData: Omit<PartCategory, 'id'>) => {
+    const docRef = await db.collection("partCategories").add(categoryData);
+    const newCategory: PartCategory = { id: docRef.id, ...categoryData };
+    setPartCategories(prev => [...prev, newCategory]);
+  };
+
+  const updatePartCategory = async (updatedCategory: PartCategory) => {
+    const { id, ...categoryData } = updatedCategory;
+    await db.collection("partCategories").doc(id).update(categoryData);
+    setPartCategories(prev => prev.map(c => c.id === id ? updatedCategory : c));
+  };
+  
+  const deletePartCategory = async (categoryId: string) => {
+    await db.collection("partCategories").doc(categoryId).delete();
+    setPartCategories(prev => prev.filter(c => c.id !== categoryId));
+  };
+
+  const addSupplier = async (supplierData: Omit<Supplier, 'id'>) => {
+    const docRef = await db.collection("suppliers").add(supplierData);
+    const newSupplier: Supplier = { id: docRef.id, ...supplierData };
+    setSuppliers(prev => [...prev, newSupplier]);
+  };
+
+  const updateSupplier = async (updatedSupplier: Supplier) => {
+    const { id, ...supplierData } = updatedSupplier;
+    await db.collection("suppliers").doc(id).update(supplierData);
+    setSuppliers(prev => prev.map(s => s.id === id ? updatedSupplier : s));
+  };
+
+  const deleteSupplier = async (supplierId: string) => {
+    await db.collection("suppliers").doc(supplierId).delete();
+    setSuppliers(prev => prev.filter(s => s.id !== supplierId));
+  };
+
   const exportData = async () => {
     try {
       const dataToExport = {
@@ -141,6 +320,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         technicians,
         parts,
         repairJobs,
+        partCategories,
+        suppliers,
       };
       
       const jsonString = JSON.stringify(dataToExport, null, 2);
@@ -180,6 +361,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             technicians: parsedData.technicians || [],
             parts: parsedData.parts || [],
             repairJobs: parsedData.repairJobs || [],
+            partCategories: parsedData.partCategories || [],
+            suppliers: parsedData.suppliers || [],
         };
 
         // Clear existing collections
@@ -227,6 +410,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         technicians: mockTechnicians,
         parts: mockParts,
         repairJobs: mockRepairJobs,
+        partCategories: mockPartCategories,
+        suppliers: mockSuppliers,
       };
 
       // Clear existing collections
@@ -261,6 +446,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     customers,
     technicians,
     parts,
+    partCategories,
+    suppliers,
     repairJobs,
     addCustomer,
     updateCustomer,
@@ -270,8 +457,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     deleteRepairJob,
     getRepairJobById,
     addPart,
+    updatePart,
+    adjustPartStock,
+    addTechnician,
+    updateTechnician,
     deleteTechnician,
     deletePart,
+    addPartCategory,
+    updatePartCategory,
+    deletePartCategory,
+    addSupplier,
+    updateSupplier,
+    deleteSupplier,
     exportData,
     importData,
     seedSampleData,

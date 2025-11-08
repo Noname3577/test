@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import StatusBadge from '../components/StatusBadge';
-import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { RepairJob, RepairStatus } from '../types';
 import RepairJobModal from '../components/RepairJobModal';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -13,6 +13,7 @@ const RepairsPage: React.FC = () => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [jobToDelete, setJobToDelete] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<RepairStatus | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [statusChangeData, setStatusChangeData] = useState<{ jobId: string; newStatus: RepairStatus; oldStatus: RepairStatus } | null>(null);
 
 
@@ -81,11 +82,28 @@ const RepairsPage: React.FC = () => {
   }
 
   const filteredJobs = useMemo(() => {
-    if (statusFilter === 'all') {
-      return repairJobs;
+    let jobs = repairJobs;
+
+    if (statusFilter !== 'all') {
+      jobs = jobs.filter(job => job.status === statusFilter);
     }
-    return repairJobs.filter(job => job.status === statusFilter);
-  }, [repairJobs, statusFilter]);
+
+    if (searchQuery.trim() !== '') {
+      const lowercasedQuery = searchQuery.toLowerCase();
+      const strippedQuery = lowercasedQuery.replace(/-/g, '');
+      jobs = jobs.filter(job => {
+        const customer = customers.find(c => c.id === job.customerId);
+        return (
+          job.repairCode.toLowerCase().includes(lowercasedQuery) ||
+          (customer?.name.toLowerCase().includes(lowercasedQuery) ?? false) ||
+          (customer?.phone.replace(/-/g, '').includes(strippedQuery) ?? false) ||
+          job.deviceModel.toLowerCase().includes(lowercasedQuery)
+        );
+      });
+    }
+
+    return jobs.sort((a, b) => b.repairCode.localeCompare(a.repairCode));
+  }, [repairJobs, statusFilter, searchQuery, customers]);
 
 
   return (
@@ -94,6 +112,20 @@ const RepairsPage: React.FC = () => {
         <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h2 className="text-lg font-semibold">งานซ่อมทั้งหมด</h2>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+                <div className="relative w-full sm:w-64">
+                    <label htmlFor="search-repair" className="sr-only">ค้นหา</label>
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                    </div>
+                    <input
+                        id="search-repair"
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="ค้นหา (รหัส, ลูกค้า, รุ่น, เบอร์โทร)..."
+                        className="block w-full rounded-md border-gray-300 bg-white py-2 pl-10 pr-3 text-sm placeholder-gray-500 focus:border-indigo-500 focus:text-gray-900 focus:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
+                    />
+                </div>
                 <div>
                     <label htmlFor="status-filter" className="sr-only">กรองตามสถานะ</label>
                     <select

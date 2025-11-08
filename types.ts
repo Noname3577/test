@@ -18,7 +18,7 @@ export interface Customer {
   id: string;
   name: string;
   phone: string;
-  lineId?: string;
+  address?: string;
   email?: string;
 }
 
@@ -28,11 +28,23 @@ export interface Technician {
   specialty: string;
 }
 
+export interface PartCategory {
+  id: string;
+  name: string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+}
+
 export interface Part {
   id: string;
   name: string;
   stock: number;
   price: number;
+  categoryId?: string;
+  supplierId?: string;
 }
 
 export interface RepairJob {

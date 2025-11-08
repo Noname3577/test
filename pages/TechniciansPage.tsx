@@ -2,11 +2,15 @@ import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import ConfirmationModal from '../components/ConfirmationModal';
+import TechnicianModal from '../components/TechnicianModal';
+import { Technician } from '../types';
 
 const TechniciansPage: React.FC = () => {
-  const { technicians, repairJobs, deleteTechnician } = useAppContext();
+  const { technicians, repairJobs, deleteTechnician, addTechnician, updateTechnician } = useAppContext();
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [technicianToDelete, setTechnicianToDelete] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTechnician, setEditingTechnician] = useState<Technician | null>(null);
 
   const getWorkload = (technicianId: string) => {
     return repairJobs.filter(job => job.technicianId === technicianId && (job.status === 'กำลังซ่อม' || job.status === 'รออะไหล่')).length;
@@ -28,13 +32,36 @@ const TechniciansPage: React.FC = () => {
       closeDeleteModal();
     }
   };
+  
+  const handleOpenCreateModal = () => {
+    setEditingTechnician(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEditTechnician = (technician: Technician) => {
+    setEditingTechnician(technician);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveTechnician = async (technicianData: Technician | Omit<Technician, 'id'>) => {
+    if ('id' in technicianData) {
+      await updateTechnician(technicianData as Technician);
+    } else {
+      await addTechnician(technicianData as Omit<Technician, 'id'>);
+    }
+    setIsModalOpen(false);
+  };
+
 
   return (
     <>
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
         <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
           <h2 className="text-lg font-semibold">ช่างเทคนิคทั้งหมด</h2>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+          <button
+            onClick={handleOpenCreateModal}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
             เพิ่มช่างใหม่
           </button>
         </div>
@@ -55,7 +82,7 @@ const TechniciansPage: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm">{tech.specialty}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">{getWorkload(tech.id)} งาน</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-3"><PencilIcon className="h-5 w-5"/></button>
+                    <button onClick={() => handleEditTechnician(tech)} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-3"><PencilIcon className="h-5 w-5"/></button>
                     <button onClick={() => openDeleteModal(tech.id)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"><TrashIcon className="h-5 w-5"/></button>
                   </td>
                 </tr>
@@ -70,6 +97,12 @@ const TechniciansPage: React.FC = () => {
         onConfirm={handleConfirmDelete}
         title="ยืนยันการลบช่างเทคนิค"
         message={`คุณแน่ใจหรือไม่ว่าต้องการลบช่างเทคนิค "${technicians.find(t => t.id === technicianToDelete)?.name}"? การกระทำนี้ไม่สามารถย้อนกลับได้`}
+      />
+       <TechnicianModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveTechnician}
+        technicianToEdit={editingTechnician}
       />
     </>
   );

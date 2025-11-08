@@ -19,13 +19,13 @@ import "firebase/compat/firestore";
 // =================================================================
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAlde0l4UZ88OYgqJhL7fb3c7vlfAl6HTQ",
-  authDomain: "testweb-b76d8.firebaseapp.com",
-  projectId: "testweb-b76d8",
-  storageBucket: "testweb-b76d8.firebasestorage.app",
-  messagingSenderId: "228009895407",
-  appId: "1:228009895407:web:bc467258e2f6f1aca4821a",
-  measurementId: "G-LMK040ZBV3"
+  apiKey: "AIzaSyDFI7nzxUNw1sdp0ze6A2Kj_ldbalN3nk4",
+  authDomain: "testone-6bdd4.firebaseapp.com",
+  projectId: "testone-6bdd4",
+  storageBucket: "testone-6bdd4.firebasestorage.app",
+  messagingSenderId: "1077149362871",
+  appId: "1:1077149362871:web:c00647d842857bc15b7b32",
+  measurementId: "G-H5RQ0W934Y"
 };
 
 
